@@ -1,8 +1,5 @@
 use crate::constants::{BLOCK_SIZE, DIRECTION};
-use rand::seq::SliceRandom;
-use rand::Rng; // 0.7.2
 use wasm_bindgen::JsValue;
-use crate::{constants, utils};
 
 pub struct Block {
     pub x: usize,
@@ -29,12 +26,7 @@ impl Block {
 
         if self.visited {
             context.set_fill_style(&JsValue::from("red"));
-            context.fill_rect(
-                top_left_x,
-                top_left_y,
-                BLOCK_SIZE.into(),
-                BLOCK_SIZE.into(),
-            );
+            context.fill_rect(top_left_x, top_left_y, BLOCK_SIZE.into(), BLOCK_SIZE.into());
 
             context.set_fill_style(&JsValue::from("#000"));
         }

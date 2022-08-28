@@ -1,5 +1,4 @@
 use std::f64;
-use std::{thread, time};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -14,13 +13,6 @@ use maze::Maze;
 extern "C" {
     fn setInterval(closure: &Closure<dyn FnMut()>, millis: u32) -> f64;
     fn cancelInterval(token: f64);
-
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
-
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
 #[wasm_bindgen]

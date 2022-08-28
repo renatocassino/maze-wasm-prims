@@ -1,11 +1,7 @@
 use crate::block::Block;
-use rand::seq::SliceRandom;
-use rand::Rng; // 0.7.
-use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
-use wasm_bindgen_futures::{spawn_local, JsFuture};
 use crate::constants::DIRECTION;
-use crate::{constants, utils};
+use rand::seq::SliceRandom;
+use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 extern "C" {
@@ -14,10 +10,6 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &str);
-}
-
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
 
 pub struct Maze {
@@ -121,7 +113,12 @@ impl Maze {
                 self.stack.push(next_index);
             }
             None => {
-                while self.stack.len() > 1 && self.possible_directions(self.stack.last().unwrap().clone()).len() == 0 {
+                while self.stack.len() > 1
+                    && self
+                        .possible_directions(self.stack.last().unwrap().clone())
+                        .len()
+                        == 0
+                {
                     self.stack.pop();
                 }
                 return;
@@ -148,7 +145,7 @@ impl Maze {
         if next_index > self.cols && current_index == next_index - self.cols {
             self.blocks[current_index].walls[DIRECTION::DOWN as usize] = false;
             self.blocks[next_index].walls[DIRECTION::UP as usize] = false;
-            return ;
+            return;
         }
 
         self.blocks[current_index].walls[DIRECTION::LEFT as usize] = false;
