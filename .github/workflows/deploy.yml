@@ -30,6 +30,9 @@ jobs:
       - name: Build my App
         run: npm run build && wasm-pack build --target web && cp index_to_build.html pkg/index.html && touch ./pkg/.nojekyll
 
+      - name: Add .gitignore to avoid send github workflow
+        run: echo '.github' >> .gitignore
+
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@4.1.0
         with:
