@@ -3,15 +3,6 @@ use crate::constants::DIRECTION;
 use rand::seq::SliceRandom;
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
-extern "C" {
-    fn setInterval(closure: &Closure<dyn FnMut()>, millis: u32) -> f64;
-    fn cancelInterval(token: f64);
-
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
-
 pub struct Maze {
     pub cols: usize,
     pub rows: usize,
@@ -94,10 +85,11 @@ impl Maze {
         Some(*random_item)
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self, context: &web_sys::CanvasRenderingContext2d) {
         if self.stack.len() == 0 {
             return;
         }
+
         let current_index = *self.stack.last().unwrap();
         let random_way = self.get_random_way(current_index);
 
@@ -110,14 +102,15 @@ impl Maze {
                     DIRECTION::LEFT => current_index - 1,
                 };
                 self.break_wall(current_index, next_index);
+                self.draw_blocks(current_index, next_index, &context);
                 self.stack.push(next_index);
             }
             None => {
                 while self.stack.len() > 1
                     && self
-                        .possible_directions(self.stack.last().unwrap().clone())
-                        .len()
-                        == 0
+                    .possible_directions(self.stack.last().unwrap().clone())
+                    .len()
+                    == 0
                 {
                     self.stack.pop();
                 }
@@ -151,5 +144,10 @@ impl Maze {
         self.blocks[current_index].walls[DIRECTION::LEFT as usize] = false;
         self.blocks[next_index].walls[DIRECTION::RIGHT as usize] = false;
         return;
+    }
+
+    pub fn draw_blocks(&mut self, current_index: usize, next_index: usize, context: &web_sys::CanvasRenderingContext2d) {
+        self.blocks[current_index].draw(context);
+        self.blocks[next_index].draw(context);
     }
 }

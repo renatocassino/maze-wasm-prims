@@ -62,11 +62,9 @@ pub fn start() {
     context.begin_path();
 
     let mut maze = Maze::new(crate::constants::COLS, crate::constants::ROWS);
+    maze.draw_maze(&context);
 
     Interval::new(0, move || {
-        context.clear_rect(0.0, 0.0, 2000.0, 2000.0);
-
-        maze.draw_maze(&context);
-        maze.run();
+        maze.run(&context);
     });
 }
