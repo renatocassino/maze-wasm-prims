@@ -1,6 +1,6 @@
-pub const BLOCK_SIZE: f64 = 6.0;
-pub const COLS: usize = 120;
-pub const ROWS: usize = 120;
+pub const BLOCK_SIZE: f64 = 10.0;
+pub const COLS: usize = 60;
+pub const ROWS: usize = 60;
 
 #[derive(Copy, Clone)]
 pub enum DIRECTION {
