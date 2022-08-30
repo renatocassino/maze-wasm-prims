@@ -1,5 +1,7 @@
+use rand::Rng;
 use crate::block::Block;
 use crate::constants::DIRECTION;
+use std::collections::HashMap;
 use rand::seq::SliceRandom;
 use wasm_bindgen::prelude::*;
 
@@ -7,7 +9,7 @@ pub struct Maze {
     pub cols: usize,
     pub rows: usize,
     pub blocks: Vec<Block>,
-    pub stack: Vec<usize>,
+    pub possible_ways: HashMap<usize, bool>,
 }
 
 impl Maze {
@@ -16,7 +18,7 @@ impl Maze {
             cols,
             rows,
             blocks: vec![],
-            stack: vec![0],
+            possible_ways: HashMap::new(),
         };
 
         for y in 0..rows {
@@ -25,7 +27,55 @@ impl Maze {
             }
         }
 
+        let mut rng = rand::thread_rng();
+        let index_first_block = rng.gen_range(0..maze.blocks.len());
+
+        maze.blocks[index_first_block].visited = true;
+        maze.append_positions_next_block(index_first_block);
+
         maze
+    }
+
+    fn get_positions_next_block(&mut self, index: usize) -> Vec<usize> {
+        let mut positions_next_block = vec![];
+        let block = &self.blocks[index];
+
+        if block.y > 0 {
+            let index_top_block = (block.y - 1) * self.cols + block.x;
+            if !self.blocks[index_top_block].visited {
+                positions_next_block.push(index_top_block);
+            }
+        }
+
+        if block.x < self.cols - 1 {
+            let index_right_block = block.y * self.cols + block.x + 1;
+            if !self.blocks[index_right_block].visited {
+                positions_next_block.push(index_right_block);
+            }
+        }
+
+        if block.y < self.rows - 1 {
+            let index_bottom_block = (block.y + 1) * self.cols + block.x;
+            if !self.blocks[index_bottom_block].visited {
+                positions_next_block.push(index_bottom_block);
+            }
+        }
+
+        if block.x > 0 {
+            let index_left_block = block.y * self.cols + block.x - 1;
+            if !self.blocks[index_left_block].visited {
+                positions_next_block.push(index_left_block);
+            }
+        }
+
+        positions_next_block
+    }
+
+    fn append_positions_next_block(&mut self, index: usize) {
+        let new_list = self.get_positions_next_block(index);
+        for new_index in new_list {
+            self.possible_ways.insert(new_index, true);
+        }
     }
 
     pub fn draw_maze(&self, context: &web_sys::CanvasRenderingContext2d) {
@@ -34,45 +84,44 @@ impl Maze {
         }
     }
 
-    pub fn possible_directions(&self, index: usize) -> Vec<DIRECTION> {
-        let mut directions: Vec<DIRECTION> = vec![];
+    pub fn possible_directions(&self, index: usize) -> Vec<usize> {
+        let mut directions: Vec<usize> = vec![];
         let block = &self.blocks[index];
 
         if block.y > 0 && block.walls[DIRECTION::UP as usize] {
             let up = &self.blocks[index - self.cols];
-            if !up.visited {
-                directions.push(DIRECTION::UP);
+            if up.visited {
+                directions.push(index - self.cols);
             }
         }
 
         if block.x < self.cols - 1 && block.walls[DIRECTION::RIGHT as usize] {
             let right = &self.blocks[index + 1];
 
-            if !right.visited {
-                directions.push(DIRECTION::RIGHT);
+            if right.visited {
+                directions.push(index + 1);
             }
         }
 
         if block.y < self.rows - 1 && block.walls[DIRECTION::DOWN as usize] {
             let down = &self.blocks[index + self.cols];
-            if !down.visited {
-                directions.push(DIRECTION::DOWN);
+            if down.visited {
+                directions.push(index + self.cols);
             }
         }
 
         if block.x > 0 && block.walls[DIRECTION::LEFT as usize] {
             let left = &self.blocks[index - 1];
-            if !left.visited {
-                directions.push(DIRECTION::LEFT);
+            if left.visited {
+                directions.push(index - 1);
             }
         }
 
         directions
     }
 
-    pub fn get_random_way(&self, index: usize) -> Option<DIRECTION> {
+    pub fn get_visited_neighborhood(&self, index: usize) -> Option<usize> {
         let possible_directions = self.possible_directions(index);
-
         if possible_directions.len() == 0 {
             return None;
         }
@@ -82,40 +131,35 @@ impl Maze {
         }
 
         let random_item = possible_directions.choose(&mut rand::thread_rng()).unwrap();
+
         Some(*random_item)
     }
 
+    pub fn get_random_possible_block(&mut self) -> Option<usize> {
+        if self.possible_ways.len() == 0 {
+            return None;
+        }
+
+        let keys: Vec<usize> = self.possible_ways.keys().cloned().collect();
+        let random_item = keys.choose(&mut rand::thread_rng()).unwrap();
+        self.possible_ways.remove(random_item);
+        return Some(*random_item);
+    }
+
     pub fn run(&mut self, context: &web_sys::CanvasRenderingContext2d) {
-        if self.stack.len() == 0 {
+        if self.possible_ways.len() == 0 {
             return;
         }
 
-        let current_index = *self.stack.last().unwrap();
-        let random_way = self.get_random_way(current_index);
-
+        let random_way = self.get_random_possible_block();
         match random_way {
-            Some(value) => {
-                let next_index = match value {
-                    DIRECTION::UP => current_index - self.cols,
-                    DIRECTION::RIGHT => current_index + 1,
-                    DIRECTION::DOWN => current_index + self.cols,
-                    DIRECTION::LEFT => current_index - 1,
-                };
-                self.break_wall(current_index, next_index);
-                self.draw_blocks(current_index, next_index, &context);
-                self.stack.push(next_index);
+            Some(index) => {
+                let next_block = self.get_visited_neighborhood(index).unwrap();
+                self.append_positions_next_block(index);
+                self.break_wall(index, next_block);
+                self.draw_blocks(index, next_block, context);
             }
-            None => {
-                while self.stack.len() > 1
-                    && self
-                    .possible_directions(self.stack.last().unwrap().clone())
-                    .len()
-                    == 0
-                {
-                    self.stack.pop();
-                }
-                return;
-            }
+            None => {}
         }
     }
 
